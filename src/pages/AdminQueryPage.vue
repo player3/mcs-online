@@ -135,10 +135,10 @@
             </template>
 
             <!-- 打印状态列 -->
-            <template v-slot:body-cell-printed="props">
+            <template v-slot:body-cell-signed="props">
               <q-td :props="props">
-                <q-badge :color="props.row.printed ? 'positive' : 'grey'">
-                  {{ props.row.printed ? '已打印' : '未打印' }}
+                <q-badge :color="props.row.signed ? 'positive' : 'grey'">
+                  {{ props.row.signed ? '已签到' : '未签到' }}
                 </q-badge>
               </q-td>
             </template>
@@ -451,16 +451,9 @@ export default defineComponent({
         sortable: true
       },
       {
-        name: 'type',
-        label: '类型',
-        field: row => row.type || row.ticketType,
-        align: 'center',
-        sortable: true
-      },
-      {
-        name: 'printed',
-        label: '打印状态',
-        field: 'printed',
+        name: 'signed',
+        label: '签到状态',
+        field: 'signed',
         align: 'center',
         sortable: true
       },
@@ -767,6 +760,7 @@ export default defineComponent({
           // 更新用户签到状态
           user.signed = true
           user.signinTime = new Date().toISOString()
+          handlePrint(user)
         } else {
           $q.notify({
             type: 'negative',

@@ -12,9 +12,9 @@
             v-model="ticketNumber"
             class="ticket-input"
             outlined
-            readonly
             placeholder="____-____-____"
             maxlength="14"
+            clearable
           >
             <template v-slot:prepend>
               <q-icon name="confirmation_number" />
@@ -160,7 +160,7 @@ export default defineComponent({
 
     // 检查门票格式是否正确
     const isValidTicketFormat = computed(() => {
-      const pattern = /^\d{4}-\d{4}-\d{4}$/
+      const pattern = /^(\d{4}-\d{4}-\d{4})|(\d{11})$/
       return pattern.test(ticketNumber.value)
     })
 
@@ -170,16 +170,7 @@ export default defineComponent({
         return
       }
       
-      // 自动添加横线
-      if (ticketNumber.value.length === 4 || ticketNumber.value.length === 9) {
-        if (char !== '-') {
-          ticketNumber.value += '-' + char
-        } else {
-          ticketNumber.value += char
-        }
-      } else {
-        ticketNumber.value += char
-      }
+      ticketNumber.value += char
     }
 
     // 删除字符
@@ -248,7 +239,7 @@ export default defineComponent({
         // 检查返回数据
         if (response.data.success) {
           userInfo.value = response.data.data
-          showUserInfo.value = true
+          handlePrintBadge()
           
           $q.notify({
             type: 'positive',
@@ -257,7 +248,7 @@ export default defineComponent({
         } else if (response.data && response.data.success === false) {
           $q.notify({
             type: 'negative',
-            message: response.data.message || '签到失败'
+            message: response.data.data || '签到失败'
           })
         } else {
           $q.notify({

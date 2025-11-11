@@ -27,7 +27,13 @@ module.exports = configure(function (ctx) {
       },
 
       vueRouterMode: 'hash',
-      vitePlugins: []
+      publicPath: './', // 使用相对路径访问静态文件，支持部署在非根路径
+      vitePlugins: [],
+      
+      extendViteConf(viteConf) {
+        // 设置 Vite base 为相对路径
+        viteConf.base = './'
+      }
     },
 
     devServer: {
