@@ -9,6 +9,7 @@
       <q-card class="q-mb-lg" flat bordered>
         <q-card-section>
           <q-input
+            ref="ticketInputRef"
             v-model="ticketNumber"
             class="ticket-input"
             outlined
@@ -135,7 +136,7 @@
 </template>
 
 <script>
-import { defineComponent, ref, computed, onMounted } from 'vue'
+import { defineComponent, ref, computed, onMounted, onUnmounted } from 'vue'
 import { useQuasar } from 'quasar'
 import { api } from 'boot/axios'
 import { printBadge } from 'src/utils/printUtils'
@@ -147,6 +148,7 @@ export default defineComponent({
     const $q = useQuasar()
     const ticketNumber = ref('')
     const showUserInfo = ref(false)
+    const ticketInputRef = ref(null) // 输入框引用
     const userInfo = ref({
       name: '',
       phone: '',
@@ -297,15 +299,60 @@ export default defineComponent({
       }
     }
 
-    // 页面加载时获取字段配置
+    // 全局键盘监听 - 支持扫码枪输入
+    const handleGlobalKeydown = (event) => {
+      // 如果当前焦点在输入框上，不做处理
+      const activeElement = document.activeElement
+      const inputElement = ticketInputRef.value?.$el?.querySelector('input')
+      
+      if (activeElement === inputElement) {
+        return
+      }
+
+      // 只处理数字、横线和退格键
+      const key = event.key
+      const allowedKeys = /^[0-9-]$/
+      
+      if (allowedKeys.test(key)) {
+        // 阻止默认行为（如快捷键）
+        event.preventDefault()
+        
+        // 自动聚焦输入框
+        if (inputElement) {
+          inputElement.focus()
+        }
+        
+        // 将字符添加到输入框
+        if (ticketNumber.value.length < 14) {
+          ticketNumber.value += key
+        }
+      } else if (key === 'Backspace') {
+        // 支持退格键
+        event.preventDefault()
+        if (inputElement) {
+          inputElement.focus()
+        }
+        deleteChar()
+      }
+    }
+
+    // 页面加载时获取字段配置并添加全局键盘监听
     onMounted(() => {
       getEventFields()
+      // 添加全局键盘监听
+      window.addEventListener('keydown', handleGlobalKeydown)
+    })
+
+    // 页面卸载时移除全局键盘监听
+    onUnmounted(() => {
+      window.removeEventListener('keydown', handleGlobalKeydown)
     })
 
     return {
       ticketNumber,
       showUserInfo,
       userInfo,
+      ticketInputRef,
       eventFields,
       eventData,
       fieldList,
