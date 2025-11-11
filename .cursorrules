@@ -1,0 +1,526 @@
+# MCS Online - 门票自助打印系统
+
+## 项目概述
+这是一个基于 Vue 3 + Quasar 框架的门票自助打印和管理系统，用于会议/活动的参会者自助签到和管理员查询管理。
+
+## 技术栈
+- **前端框架**: Vue 3 (Composition API)
+- **UI 框架**: Quasar Framework (Material Design)
+- **路由**: Vue Router
+- **HTTP 客户端**: Axios
+- **开发语言**: JavaScript
+- **包管理器**: Yarn (推荐) / NPM
+- **Node 版本**: ^20 || ^18 || ^16
+
+## 项目结构
+```
+mcs-online/
+├── src/
+│   ├── pages/               # 页面组件
+│   │   ├── SelfPrintPage.vue      # 用户自助打印页面
+│   │   └── AdminQueryPage.vue     # 管理员查询页面
+│   ├── components/          # 可复用组件
+│   ├── boot/               # Quasar启动文件
+│   │   └── axios.js              # Axios配置
+│   ├── services/           # API服务层
+│   │   └── api.js                # API接口定义
+│   ├── utils/              # 工具函数
+│   │   └── printUtils.js         # 打印工具函数
+│   ├── router/             # 路由配置
+│   └── layouts/            # 布局组件
+├── quasar.config.js        # Quasar配置文件
+├── mock-server.js          # Mock服务器
+├── test-print-server.js    # 打印测试服务器
+└── 各种.md文档             # 功能说明文档
+```
+
+## 核心功能
+
+### 1. 用户自助打印页面 (SelfPrintPage.vue)
+- 九宫格虚拟键盘输入门票编号
+- 自动格式验证（dddd-dddd-dddd）
+- 调用 AutoSignin 接口进行签到
+- 打印胸牌到本地打印服务
+
+### 2. 管理员查询页面 (AdminQueryPage.vue)
+- 多条件查询（姓名/手机/邮箱/门票编号）
+- 分页显示查询结果（表格形式）
+- 点击姓名查看用户详情（弹窗）
+- 批量签到和打印功能
+- 门票编号自动查询（完整格式自动触发）
+- 回车键快速查询
+- 智能空值过滤（详情弹窗）
+- 动态字段映射（支持中英文双语）
+
+## API 接口
+
+### 基础配置
+- **开发环境**: `/api/v2` (代理到 `https://iccad2025.mymova.com`)
+- **生产环境**: `https://iccad2025.mymova.com/api/v2`
+
+### 主要接口
+1. **GetEventFields** (GET `/GetEventFields`)
+   - 获取活动字段配置
+   - 返回 eventData（字段映射）和 fieldList（字段列表）
+
+2. **AutoSignin** (GET `/AutoSignin?regcode={门票编号}`)
+   - 用户自动签到
+   - 返回用户信息
+
+3. **AutoSearch** (GET `/AutoSearch`)
+   - 分页查询用户
+   - 参数: sessionId, page (从0开始), pageSize, name, regcode, email, mobile
+   - 返回: { success, code, data, total }
+
+4. **打印服务** (POST `http://localhost:6789/postname`)
+   - 本地打印服务
+   - 发送完整用户信息进行打印
+
+## 代码规范
+
+### Vue 组件
+- 使用 Composition API (setup)
+- 使用 `ref` 和 `computed` 管理状态
+- 使用 `onMounted` 等生命周期钩子
+- 保持组件单一职责
+
+### 命名规范
+- 组件名: PascalCase (如 `SelfPrintPage`)
+- 函数名: camelCase (如 `searchUser`)
+- 常量: UPPER_SNAKE_CASE (如 `API_BASE_URL`)
+- 文件名: kebab-case 或 PascalCase
+
+### API 调用
+- 所有 API 调用使用 `src/services/api.js` 中定义的函数
+- 使用 try-catch 处理错误
+- 使用 Quasar 的 Loading 和 Notify 提供用户反馈
+
+### 样式
+- 优先使用 Quasar 组件和工具类
+- 使用 scoped 样式避免污染全局
+- 遵循 Material Design 设计规范
+
+## 重要功能特性
+
+### 1. 门票编号自动查询
+- 输入完整格式（dddd-dddd-dddd）自动触发查询
+- 查询完成后自动选中输入框内容
+- 适合批量签到场景
+
+### 2. 打印功能（公共工具）
+- 位置: `src/utils/printUtils.js`
+- 函数: `printBadge(userInfo, fieldList, eventData)`
+- 包含字段值转换和字段映射逻辑
+- 所有打印操作使用此工具函数
+
+### 3. 字段映射动态化
+- 使用 `eventData` 进行动态字段映射
+- 支持中英文双语显示
+- 支持自定义字段（cf_*）
+- 三层后备机制（eventData → 默认映射 → 原始key）
+
+### 4. 详情弹窗空值过滤
+- 自动隐藏 null、undefined、空字符串
+- 保留重要状态字段（signed、printed）
+- 界面更简洁清晰
+
+### 5. 回车键查询
+- 所有输入框支持 Enter 键触发查询
+- 自动验证查询条件
+- 提升操作效率
+
+## 开发指南
+
+### 启动项目
+```bash
+# 安装依赖
+yarn install
+
+# 启动开发服务器（真实环境）
+yarn dev
+
+# 启动打印测试服务器（另一个终端）
+node test-print-server.js
+
+# 启动 Mock 服务器（测试用）
+node mock-server.js
+```
+
+### 添加新 API 接口
+1. 在 `src/services/api.js` 中定义接口函数
+2. 使用 `api` 实例调用（会自动应用 baseURL）
+3. 添加适当的 JSDoc 注释
+
+### 添加新页面
+1. 在 `src/pages/` 创建 Vue 组件
+2. 在 `src/router/routes.js` 添加路由
+3. 使用 Composition API
+4. 按需导入 Quasar 组件
+
+### 修改打印逻辑
+- 只需修改 `src/utils/printUtils.js`
+- 所有使用打印功能的页面会自动更新
+
+## 常见任务
+
+### 添加新的查询条件
+1. 在 `queryForm` 中添加字段
+2. 在模板中添加输入框
+3. 在 API 调用中传递参数
+4. 添加 `@keyup.enter="handleEnterKey"` 支持回车查询
+
+### 修改字段显示名称
+- 后端修改 `GetEventFields` 接口返回的 `eventData`
+- 前端无需修改代码，自动更新
+
+### 添加新的表格列
+1. 在 `tableColumns` 中添加列定义
+2. 如需自定义显示，添加对应的 slot
+
+### 调试技巧
+- 检查浏览器控制台的日志输出
+- 使用 Vue DevTools 查看组件状态
+- 检查 Network 面板的 API 请求
+- 查看 `eventData` 和 `fieldList` 的值
+
+## 注意事项
+
+### API 调用
+- **分页参数**: UI 使用 1-based，API 使用 0-based（需要转换）
+- **门票编号**: 自动查询会清空其他查询条件
+- **字段映射**: 优先使用 eventData，然后默认映射，最后原始key
+
+### 打印功能
+- 本地打印服务必须运行在 `http://localhost:6789`
+- 打印数据包含字段值转换和映射
+- 使用公共 `printUtils.js`，不要在页面中重复实现
+
+### 状态管理
+- 使用 `ref` 管理响应式状态
+- 使用 `computed` 计算派生状态
+- 避免直接修改 props
+
+### 用户体验
+- 所有异步操作显示 loading
+- 操作结果使用 notify 反馈
+- 表单验证提供清晰错误提示
+- 支持键盘快捷键（Enter 查询）
+
+## 文档参考
+- [Quasar 文档](https://quasar.dev/)
+- [Vue 3 文档](https://vuejs.org/)
+- [Axios 文档](https://axios-http.com/)
+
+## 特殊说明
+
+### 代理配置
+- 开发环境使用 `/api` 代理到后端
+- `quasar.config.js` 中配置 `devServer.proxy`
+- 生产环境直接使用后端域名
+
+### 字段配置
+- 页面加载时调用 `GetEventFields` 获取配置
+- 保存在 `eventFields`、`eventData`、`fieldList` 变量中
+- 用于字段显示名称映射和值转换
+
+### Mock 模式
+- 用于无后端时的前端开发
+- 运行 `node mock-server.js`
+- 提供模拟的 API 响应
+
+## 代码示例
+
+### 调用 API
+```javascript
+import { api } from 'boot/axios'
+
+// GET 请求
+const response = await api.get('/AutoSearch', {
+  params: { page: 0, pageSize: 10 }
+})
+
+// POST 请求
+const response = await api.post('/AutoSignin', {
+  ticketNumber: '1234-5678-9012'
+})
+```
+
+### 使用打印工具
+```javascript
+import { printBadge } from 'src/utils/printUtils'
+
+await printBadge(userInfo, fieldList, eventData)
+```
+
+### 显示通知
+```javascript
+$q.notify({
+  type: 'positive',  // positive/negative/warning/info
+  message: '操作成功！',
+  position: 'top'
+})
+```
+
+### 显示加载
+```javascript
+$q.loading.show({ message: '正在加载...' })
+// ... 异步操作
+$q.loading.hide()
+```
+
+## 文档规范
+
+### 文档组织结构
+所有文档统一存放在 `docs/` 目录下，按功能和用途分类：
+
+```
+docs/
+├── README.md              # 文档索引和规范说明
+├── 文档重组说明.md         # 文档重组和精简说明
+├── guide/                 # 指南文档（4个）
+│   ├── 项目总览.md
+│   ├── START.md
+│   ├── 使用说明.txt
+│   └── 环境配置说明.md
+├── features/              # 核心功能文档（4个，仅限重要功能）
+│   ├── 分页查询说明.md
+│   ├── 打印服务说明.md
+│   ├── 打印功能重构说明.md
+│   └── 字段映射动态化说明.md
+├── quick-reference/       # 快速参考（2个）
+│   ├── 打印功能重构-快速参考.md
+│   └── 字段映射动态化-快速参考.md
+└── bugfix/                # Bug修复记录（1个，仅限重大Bug）
+    └── BUG修复-分页参数.md
+```
+
+### 文档命名规范
+
+1. **指南文档** (`guide/`)
+   - 格式：`功能名称说明.md` 或 `功能描述.md`
+   - 示例：`环境配置说明.md`、`START.md`
+
+2. **功能文档** (`features/`)
+   - 格式：`功能模块名称说明.md`
+   - 示例：`用户详情弹窗说明.md`
+
+3. **快速参考** (`quick-reference/`)
+   - 格式：`功能名称-快速参考.md`
+   - 示例：`打印功能重构-快速参考.md`
+
+4. **Bug修复** (`bugfix/`)
+   - 格式：`BUG修复-问题描述.md` 或 `修复总结-问题描述.md`
+   - 示例：`BUG修复-分页参数.md`
+
+5. **测试文档** (`testing/`)
+   - 格式：`功能名称测试.md`
+   - 示例：`门票编号自动查询测试.md`
+
+### 功能说明文档结构模板
+
+```markdown
+# 功能名称说明
+
+## 功能概述
+简要说明功能的用途和价值（2-3句话）
+
+## 功能特点
+- ✅ 特点1：具体描述
+- ✅ 特点2：具体描述
+- ✅ 特点3：具体描述
+
+## 使用方式
+详细的使用步骤和场景
+
+### 场景一：XXX
+具体步骤...
+
+### 场景二：XXX
+具体步骤...
+
+## 技术实现
+关键技术点和代码示例
+
+### 核心代码
+\`\`\`javascript
+// 示例代码
+\`\`\`
+
+## 注意事项
+- ⚠️ 注意点1
+- ⚠️ 注意点2
+
+## 相关文档
+- [相关文档1](./相关文档1.md)
+- [相关文档2](./相关文档2.md)
+```
+
+### 快速参考文档结构模板
+
+```markdown
+# 功能名称 - 快速参考
+
+## 📋 功能说明
+一句话功能概述
+
+## 🚀 快速使用
+最简使用方式（代码示例）
+
+## 🎯 核心要点
+| 项目 | 说明 |
+|------|------|
+| 要点1 | 描述 |
+| 要点2 | 描述 |
+
+## ⚠️ 注意事项
+- 关键注意点1
+- 关键注意点2
+
+## 📚 详细文档
+[完整文档链接](./完整文档.md)
+```
+
+### Bug修复文档结构模板
+
+```markdown
+# Bug修复 - 问题描述
+
+## 问题描述
+Bug的现象和影响
+
+## 原因分析
+Bug的根本原因
+
+## 解决方案
+修复方法和代码变更
+
+### 修改前
+\`\`\`javascript
+// 旧代码
+\`\`\`
+
+### 修改后
+\`\`\`javascript
+// 新代码
+\`\`\`
+
+## 测试验证
+测试方法和结果
+
+## 相关提交
+- Commit: [hash]
+- 相关文件：XXX
+```
+
+### 文档编写规范
+
+1. **语言规范**
+   - 使用中文编写
+   - 技术术语保留英文（如 API、Vue、Quasar）
+   - 代码注释使用中文
+
+2. **代码示例**
+   - 必须包含实际可运行的代码
+   - 添加必要的注释
+   - 说明输入和输出
+
+3. **格式规范**
+   - 使用 Markdown 标准语法
+   - 使用 emoji 增强可读性（✅ ❌ ⚠️ 📋 🚀 等）
+   - 代码块指定语言类型
+   - 表格对齐整齐
+
+4. **结构规范**
+   - 使用清晰的标题层级（# ## ### ####）
+   - 重要信息放在前面
+   - 相关内容分组归类
+   - 文档末尾添加相关链接
+
+5. **内容规范**
+   - 简洁明了，避免冗余
+   - 包含实际示例
+   - 说明使用场景
+   - 注明注意事项
+
+### 文档生成原则 ⚠️
+
+**最小化原则**: 仅在必要时生成文档，避免文档过度膨胀
+
+#### 必须创建文档的情况
+1. **新增核心功能** - 影响用户使用流程的功能
+2. **架构级变更** - 影响项目结构或技术栈的变更
+3. **复杂Bug修复** - 需要详细记录原因和解决方案的重要Bug
+4. **API接口变更** - 新增或修改对外API接口
+5. **重大重构** - 影响多个模块的代码重构
+
+#### 不需要创建文档的情况
+1. **代码微调** - 样式调整、文案修改、小的代码优化
+2. **简单Bug修复** - 一目了然的Bug修复（如拼写错误、简单逻辑错误）
+3. **依赖更新** - 常规的依赖包版本更新
+4. **代码重构** - 不影响功能的内部代码优化
+5. **UI微调** - 不改变功能的界面调整
+6. **注释更新** - 代码注释的补充和优化
+
+#### 文档更新策略
+- **优先更新现有文档**，而不是创建新文档
+- 小改动直接在代码注释中说明
+- 使用 Git commit message 记录常规变更
+- 只有重要变更才需要独立文档
+
+### 文档维护规范
+
+1. **新增功能文档**（仅限核心功能）
+   - 在 `docs/features/` 创建功能文档
+   - 复杂功能在 `docs/quick-reference/` 创建快速参考
+   - 更新 `docs/README.md` 索引
+
+2. **Bug修复文档**（仅限重大Bug）
+   - 在 `docs/bugfix/` 记录修复过程
+   - 包含问题描述、原因分析、解决方案
+   - 关联相关代码提交
+   - 简单Bug修复只需在 commit message 中说明
+
+3. **测试文档**（仅限复杂测试场景）
+   - 在 `docs/testing/` 添加测试用例
+   - 包含测试步骤和预期结果
+   - 记录测试环境和数据
+   - 简单功能测试不需要独立文档
+
+4. **文档更新**
+   - 代码变更时优先更新现有文档
+   - 保持文档与代码一致
+   - 更新文档修改日期
+
+5. **文档审查**
+   - 定期检查并删除过时文档
+   - 合并相似或重复的文档
+   - 检查链接有效性
+   - 确保代码示例可运行
+   - 验证文档完整性
+
+### 文档引用规范
+
+1. **内部链接**
+   - 使用相对路径：`[文档名](./文档名.md)`
+   - 跨目录引用：`[文档名](../features/文档名.md)`
+
+2. **代码引用**
+   - 引用具体文件：`src/pages/AdminQueryPage.vue`
+   - 引用函数：`` `formatFieldName()` ``
+   - 引用配置：`quasar.config.js`
+
+3. **外部链接**
+   - 官方文档：`[Quasar 文档](https://quasar.dev/)`
+   - 添加说明性文字
+
+## 响应所有请求时的原则
+1. **响应语言**: 所有回复使用中文
+2. **代码质量**: 保持现有代码风格和规范
+3. **测试考虑**: 修改代码后检查 linter 错误
+4. **文档最小化**: 仅为核心功能、重大变更、复杂Bug生成文档，小改动不创建新文档
+5. **文档更新**: 优先更新现有文档，而非创建新文档
+6. **用户体验**: 优先考虑用户操作流畅度
+7. **兼容性**: 保持与现有功能的兼容性
+8. **错误处理**: 添加适当的 try-catch 和用户提示
+9. **文档规范**: 新建或更新文档时严格遵循文档规范和结构模板
+
