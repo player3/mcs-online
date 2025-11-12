@@ -1,8 +1,17 @@
 <template>
   <q-page class="q-pa-md">
     <div class="q-pa-md" style="max-width: 1000px; margin: 0 auto;">
-      <div class="text-h4 text-center q-mb-lg">
-        用户信息查询
+      <div class="row items-center justify-between q-mb-lg">
+        <div class="text-h4">
+          用户信息查询
+        </div>
+        <q-btn
+          color="secondary"
+          icon="settings"
+          label="打印配置"
+          to="/settings"
+          unelevated
+        />
       </div>
 
       <!-- SessionId 显示 -->

@@ -5,7 +5,8 @@ const routes = [
     children: [
       { path: '', redirect: '/self-print' },
       { path: 'self-print', component: () => import('pages/SelfPrintPage.vue') },
-      { path: 'admin-query', component: () => import('pages/AdminQueryPage.vue') }
+      { path: 'admin-query', component: () => import('pages/AdminQueryPage.vue') },
+      { path: 'settings', component: () => import('pages/SettingsPage.vue') }
     ]
   },
 

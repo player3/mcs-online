@@ -80,6 +80,15 @@ export const eventService = {
    */
   async getEventFields() {
     return await api.get('/GetEventFields')
+  },
+
+  /**
+   * 获取打印配置
+   * @deprecated 已改为直接调用本地打印服务 http://localhost:6789/printConfig
+   * @returns {Promise} 返回打印配置 XML
+   */
+  async getPrintConfig() {
+    return await api.get('/GetPrintConfig')
   }
 }
 
