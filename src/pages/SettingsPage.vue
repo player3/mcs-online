@@ -231,8 +231,8 @@ export default defineComponent({
     const config = ref(null)
     const showPreview = ref(false)
     const previewCanvas = ref(null)
-    const previewWidth = ref(400)
-    const previewHeight = ref(533)
+    const previewWidth = ref(600)
+    const previewHeight = ref(800)
     const previewScale = ref(1)
 
     // 表格列定义
@@ -285,6 +285,7 @@ export default defineComponent({
         // 检查是否有解析错误
         const parserError = xmlDoc.querySelector('parsererror')
         if (parserError) {
+          console.error('XML 解析错误:', parserError.textContent)
           throw new Error('XML 解析失败')
         }
 
@@ -295,10 +296,19 @@ export default defineComponent({
 
         // 解析卡片配置
         const cardElement = customSetting.querySelector('Card')
+        if (!cardElement) {
+          throw new Error('无效的配置格式：缺少 Card 节点')
+        }
+
+        // 使用 :scope > 选择器，只选择 Card 的直接子元素，避免选中 PrintTextSetting 中的同名元素
+        const widthText = cardElement.querySelector(':scope > Width')?.textContent
+        const heightText = cardElement.querySelector(':scope > Height')?.textContent
+        const printImageText = cardElement.querySelector(':scope > PrintImage')?.textContent
+
         const cardConfig = {
-          width: parseInt(cardElement.querySelector('Width')?.textContent || '0'),
-          height: parseInt(cardElement.querySelector('Height')?.textContent || '0'),
-          printImage: cardElement.querySelector('PrintImage')?.textContent === 'true'
+          width: parseInt(widthText || '0'),
+          height: parseInt(heightText || '0'),
+          printImage: printImageText === 'true'
         }
 
         // 解析二维码配置
@@ -351,10 +361,12 @@ export default defineComponent({
 
       try {
         // 直接调用本地打印服务获取配置
-        const response = await axios.get('http://localhost:6789/printConfig', {
+        // 注意：如果打印服务运行在其他机器，请修改此地址
+        const printServiceUrl = 'http://localhost:6789/printConfig'
+        const response = await axios.get(printServiceUrl, {
           timeout: 5000
         })
-        
+
         console.log('打印配置响应:', response.data)
 
         // 判断返回的数据格式
@@ -380,9 +392,7 @@ export default defineComponent({
 
         // 如果预览已打开，重新绘制
         if (showPreview.value) {
-          nextTick(() => {
-            drawPreview()
-          })
+          await drawPreview()
         }
       } catch (error) {
         console.error('加载打印配置失败:', error)
@@ -398,50 +408,68 @@ export default defineComponent({
     }
 
     // 绘制预览
-    const drawPreview = () => {
+    const drawPreview = async () => {
       if (!config.value || !previewCanvas.value) {
         return
       }
 
-      const canvas = previewCanvas.value
-      const ctx = canvas.getContext('2d')
       const cardConfig = config.value.card
 
       // 计算缩放比例（最大宽度600px）
       const maxWidth = 600
       previewScale.value = Math.min(maxWidth / cardConfig.width, maxWidth / cardConfig.height)
-      previewWidth.value = cardConfig.width * previewScale.value
-      previewHeight.value = cardConfig.height * previewScale.value
+      previewWidth.value = Math.round(cardConfig.width * previewScale.value)
+      previewHeight.value = Math.round(cardConfig.height * previewScale.value)
+
+      // 等待 DOM 更新，确保 canvas 尺寸已更新
+      await nextTick()
+
+      const canvas = previewCanvas.value
+      if (!canvas) {
+        return
+      }
+
+      const ctx = canvas.getContext('2d')
+
+      // 重新计算实际的缩放比例（基于实际 canvas 尺寸）
+      const actualScaleX = canvas.width / cardConfig.width
+      const actualScaleY = canvas.height / cardConfig.height
+      const actualScale = Math.min(actualScaleX, actualScaleY)
 
       // 清空画布
-      ctx.clearRect(0, 0, previewWidth.value, previewHeight.value)
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
 
       // 绘制卡片背景（白色）
       ctx.fillStyle = '#FFFFFF'
-      ctx.fillRect(0, 0, previewWidth.value, previewHeight.value)
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
 
       // 绘制卡片边框
       ctx.strokeStyle = '#CCCCCC'
       ctx.lineWidth = 2
-      ctx.strokeRect(0, 0, previewWidth.value, previewHeight.value)
+      ctx.strokeRect(0, 0, canvas.width, canvas.height)
 
       // 绘制背景图片占位（如果启用）
       if (cardConfig.printImage) {
         ctx.fillStyle = '#F5F5F5'
-        ctx.fillRect(0, 0, previewWidth.value, previewHeight.value)
+        ctx.fillRect(0, 0, canvas.width, canvas.height)
         ctx.fillStyle = '#E0E0E0'
-        ctx.font = `${12 * previewScale.value}px Arial`
+        ctx.font = `${12 * actualScale}px Arial`
         ctx.textAlign = 'center'
         ctx.textBaseline = 'middle'
-        ctx.fillText('背景图片', previewWidth.value / 2, previewHeight.value / 2)
+        ctx.fillText('背景图片', canvas.width / 2, canvas.height / 2)
       }
 
       // 绘制文本元素
       config.value.printTexts.forEach((textConfig) => {
-        const x = textConfig.x * previewScale.value
-        const y = textConfig.y * previewScale.value
-        const width = textConfig.width * previewScale.value
-        const height = textConfig.height * previewScale.value
+        // 配置中的 x, y 是中心点坐标，需要转换为左上角坐标
+        const centerX = textConfig.x * actualScale
+        const centerY = textConfig.y * actualScale
+        const width = textConfig.width * actualScale
+        const height = textConfig.height * actualScale
+
+        // 计算左上角坐标（从中心点推算）
+        const x = centerX - width / 2
+        const y = centerY - height / 2
 
         // 绘制文本框背景（半透明）
         ctx.fillStyle = 'rgba(33, 150, 243, 0.1)'
@@ -453,7 +481,7 @@ export default defineComponent({
         ctx.strokeRect(x, y, width, height)
 
         // 设置字体
-        const fontSize = textConfig.fontSize * previewScale.value
+        const fontSize = textConfig.fontSize * actualScale
         ctx.font = `${textConfig.bold ? 'bold ' : ''}${fontSize}px ${textConfig.fontType || 'Arial'}`
         ctx.fillStyle = '#333333'
 
@@ -493,23 +521,28 @@ export default defineComponent({
         const displayText = textConfig.text || '示例文本'
         ctx.fillText(displayText, textX, textY)
 
-        // 绘制文本标签（小字）
+        // 绘制文本标签（小字，显示在左上角）
         ctx.save()
-        ctx.font = `${8 * previewScale.value}px Arial`
+        ctx.font = `${8 * actualScale}px Arial`
         ctx.fillStyle = '#999999'
         ctx.textAlign = 'left'
-        ctx.textBaseline = 'top'
-        ctx.fillText(textConfig.text, x, y - 12 * previewScale.value)
+        ctx.textBaseline = 'bottom'
+        ctx.fillText(textConfig.text, x, y - 2 * actualScale)
         ctx.restore()
       })
 
       // 绘制二维码占位符
       if (config.value.qrCode) {
         const qrConfig = config.value.qrCode
-        const qrX = qrConfig.x * previewScale.value
-        const qrY = qrConfig.y * previewScale.value
-        const qrWidth = qrConfig.width * previewScale.value
-        const qrHeight = qrConfig.height * previewScale.value
+        // 配置中的 x, y 是中心点坐标，需要转换为左上角坐标
+        const centerX = qrConfig.x * actualScale
+        const centerY = qrConfig.y * actualScale
+        const qrWidth = qrConfig.width * actualScale
+        const qrHeight = qrConfig.height * actualScale
+
+        // 计算左上角坐标（从中心点推算）
+        const qrX = centerX - qrWidth / 2
+        const qrY = centerY - qrHeight / 2
 
         // 绘制二维码背景
         ctx.fillStyle = '#FFFFFF'
@@ -538,21 +571,21 @@ export default defineComponent({
 
         // 绘制二维码标签
         ctx.save()
-        ctx.font = `${8 * previewScale.value}px Arial`
+        ctx.font = `${8 * actualScale}px Arial`
         ctx.fillStyle = '#4CAF50'
         ctx.textAlign = 'center'
         ctx.textBaseline = 'top'
-        ctx.fillText('二维码', qrX + qrWidth / 2, qrY + qrHeight + 4 * previewScale.value)
+        ctx.fillText('二维码', centerX, qrY + qrHeight + 4 * actualScale)
         ctx.restore()
       }
     }
 
     // 监听配置变化，重新绘制预览
-    watch([config, showPreview], () => {
+    watch([config, showPreview], async () => {
       if (config.value && showPreview.value) {
-        nextTick(() => {
-          drawPreview()
-        })
+        // 等待 DOM 渲染完成
+        await nextTick()
+        await drawPreview()
       }
     })
 

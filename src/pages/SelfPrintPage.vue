@@ -1,12 +1,8 @@
 <template>
-  <q-page class="flex flex-center">
-    <div class="q-pa-md" style="max-width: 500px; width: 100%;">
-      <div class="text-h4 text-center q-mb-lg">
-        请输入门票编号
-      </div>
-
+  <q-page class="flex flex-center self-print-page">
+    <div class="q-pa-md" style="max-width: 80%; width: 100%;">
       <!-- 门票编号显示框 -->
-      <q-card class="q-mb-lg" flat bordered>
+      <q-card class="glass-card q-mb-lg" flat bordered>
         <q-card-section>
           <q-input
             ref="ticketInputRef"
@@ -18,7 +14,9 @@
             clearable
           >
             <template v-slot:prepend>
-              <q-icon name="confirmation_number" />
+              <div class="ticket-input-icon-wrapper">
+                <q-icon name="confirmation_number" color="white" size="48px" />
+              </div>
             </template>
           </q-input>
         </q-card-section>
@@ -26,7 +24,7 @@
 
       <!-- 自定义九宫格键盘 -->
       <div class="keyboard-container">
-        <q-card flat bordered>
+        <q-card class="glass-card keyboard-card" flat bordered>
           <q-card-section>
             <div class="row q-col-gutter-sm">
               <!-- 数字键1-9 -->
@@ -85,7 +83,7 @@
       <div class="row q-col-gutter-md q-mt-md">
         <div class="col-6">
           <q-btn
-            class="full-width"
+            class="full-width action-button"
             size="lg"
             color="grey"
             label="清空"
@@ -96,7 +94,7 @@
         </div>
         <div class="col-6">
           <q-btn
-            class="full-width"
+            class="full-width action-button"
             size="lg"
             color="positive"
             label="确认签到"
@@ -368,3 +366,91 @@ export default defineComponent({
 })
 </script>
 
+<style scoped>
+.self-print-page {
+  min-height: 100vh;
+  background: #000 url('/bg.png') center center / cover no-repeat;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 30vh 24px 6vh;
+  box-sizing: border-box;
+}
+
+.self-print-panel {
+  width: min(420px, 90vw);
+  border-radius: 24px;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+  color: #fff;
+}
+
+.self-print-panel .text-h4 {
+  color: #fff;
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+}
+
+.keyboard-container {
+  margin-top: 12px;
+}
+
+.keyboard-button {
+  height: 120px;
+}
+
+.ticket-input :deep(.q-field__control) {
+  background: transparent;
+  border-radius: 16px;
+  border-color: rgba(255, 255, 255, 0.5);
+  height: 120px;
+}
+
+.ticket-input :deep(.q-field__native),
+.ticket-input :deep(.q-field__prefix),
+.ticket-input :deep(.q-field__suffix) {
+  color: #fff;
+}
+
+.ticket-input :deep(.q-field__append) {
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.ticket-input :deep(.q-field__append .q-icon) {
+  color: #fff;
+  font-size: 48px;
+}
+
+.ticket-input :deep(.q-field__native) {
+  font-size: 48px;
+}
+
+.ticket-input :deep(.q-field__native::placeholder) {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.ticket-input :deep(.q-field__prepend) {
+  height: 100%;
+}
+
+.ticket-input-icon-wrapper {
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.action-button {
+  height: 120px;
+}
+
+.action-button :deep(.q-btn__content) {
+  font-size: 48px;
+}
+</style>

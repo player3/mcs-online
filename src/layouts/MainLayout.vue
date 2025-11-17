@@ -1,29 +1,21 @@
 <template>
   <q-layout view="hHh lpR fFf">
-    <q-header elevated class="bg-primary text-white">
-      <q-toolbar>
-        <q-toolbar-title>
-          门票自助打印系统
-        </q-toolbar-title>
-
-        <!-- 打印机状态显示 -->
-        <div class="printer-status">
-          <q-chip
-            :color="printerOnline ? 'positive' : 'negative'"
-            text-color="white"
-            :icon="printerOnline ? 'print' : 'print_disabled'"
-            size="md"
-          >
-            <span class="text-weight-medium">
-              {{ printerOnline ? '打印机在线' : '打印机离线' }}
-            </span>
-          </q-chip>
-          <q-tooltip v-if="!printerOnline" class="bg-negative">
-            打印服务连接失败，请检查打印服务是否启动
-          </q-tooltip>
-        </div>
-      </q-toolbar>
-    </q-header>
+    <!-- 打印机状态显示 -->
+    <div class="printer-status-chip">
+      <q-chip
+        :color="printerOnline ? 'positive' : 'negative'"
+        text-color="white"
+        :icon="printerOnline ? 'print' : 'print_disabled'"
+        size="md"
+      >
+        <span class="text-weight-medium">
+          {{ printerOnline ? '打印机在线' : '打印机离线' }}
+        </span>
+      </q-chip>
+      <q-tooltip v-if="!printerOnline" class="bg-negative">
+        打印服务连接失败，请检查打印服务是否启动
+      </q-tooltip>
+    </div>
 
     <q-page-container>
       <router-view />
@@ -90,9 +82,10 @@ export default defineComponent({
 </script>
 
 <style scoped>
-.printer-status {
-  display: flex;
-  align-items: center;
-  margin-left: auto;
+.printer-status-chip {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 2000;
 }
 </style>
