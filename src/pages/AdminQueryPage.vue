@@ -5,13 +5,6 @@
         <div class="text-h4">
           用户信息查询
         </div>
-        <q-btn
-          color="secondary"
-          icon="settings"
-          label="打印配置"
-          to="/settings"
-          unelevated
-        />
       </div>
 
       <!-- SessionId 显示 -->
@@ -37,6 +30,19 @@
               >
                 <template v-slot:prepend>
                   <q-icon name="person" />
+                </template>
+              </q-input>
+            </div>
+            <div class="col-12 col-md-6">
+              <q-input
+                v-model="queryForm.py"
+                label="姓名拼音"
+                outlined
+                clearable
+                @keyup.enter="handleEnterKey"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="spellcheck" />
                 </template>
               </q-input>
             </div>
@@ -288,6 +294,13 @@
 
         <q-card-actions align="right" class="q-px-md q-py-md">
           <q-btn
+            label="编辑信息"
+            color="secondary"
+            icon="edit"
+            @click="openEditDialog(selectedUser)"
+            flat
+          />
+          <q-btn
             label="取消选择"
             color="grey"
             icon="clear"
@@ -360,6 +373,13 @@
 
           <q-card-actions align="right">
             <q-btn
+              label="编辑"
+              color="secondary"
+              icon="edit"
+              @click="openEditDialog(detailUser)"
+              unelevated
+            />
+            <q-btn
               label="签到"
               color="primary"
               icon="check_circle"
@@ -375,6 +395,52 @@
               unelevated
             />
             <q-btn label="关闭" color="grey" flat v-close-popup />
+          </q-card-actions>
+        </q-card>
+      </q-dialog>
+
+      <!-- 用户信息编辑对话框 -->
+      <q-dialog v-model="showEditDialog" persistent>
+        <q-card style="min-width: 500px; max-width: 700px;">
+          <q-card-section class="row items-center">
+            <div class="text-h6">编辑用户信息</div>
+            <q-space />
+            <q-btn icon="close" flat round dense v-close-popup @click="cancelEdit" />
+          </q-card-section>
+
+          <q-separator />
+
+          <q-card-section>
+            <div class="row q-col-gutter-md">
+              <div
+                v-for="field in editFieldEntries"
+                :key="field.key"
+                class="col-12 col-md-6"
+              >
+                <q-toggle
+                  v-if="field.type === 'boolean'"
+                  v-model="editUserForm[field.key]"
+                  :label="field.label"
+                  color="primary"
+                  keep-color
+                />
+                <q-input
+                  v-else
+                  v-model="editUserForm[field.key]"
+                  :label="field.label"
+                  outlined
+                  :disable="readOnlyEditFields.includes(field.key)"
+                  :readonly="readOnlyEditFields.includes(field.key)"
+                />
+              </div>
+            </div>
+          </q-card-section>
+
+          <q-separator />
+
+          <q-card-actions align="right">
+            <q-btn label="取消" color="grey" flat @click="cancelEdit" />
+            <q-btn label="保存" color="primary" icon="save" @click="saveUserEdits" unelevated />
           </q-card-actions>
         </q-card>
       </q-dialog>
@@ -398,6 +464,7 @@ export default defineComponent({
     
     const queryForm = ref({
       name: '',
+      py: '',
       phone: '',
       email: '',
       ticketNumber: ''
@@ -410,6 +477,11 @@ export default defineComponent({
     // 用户详情对话框
     const showDetailDialog = ref(false)
     const detailUser = ref(null)
+
+    // 用户编辑对话框
+    const showEditDialog = ref(false)
+    const createEmptyEditForm = () => ({})
+    const editUserForm = ref(createEmptyEditForm())
 
     // 门票编号输入框引用
     const ticketNumberInput = ref(null)
@@ -484,6 +556,7 @@ export default defineComponent({
     const hasQueryCondition = computed(() => {
       return !!(
         queryForm.value.name ||
+        queryForm.value.py ||
         queryForm.value.phone ||
         queryForm.value.email ||
         queryForm.value.ticketNumber
@@ -513,10 +586,167 @@ export default defineComponent({
       return filtered
     })
 
+    const isSameUser = (user, target) => {
+      if (!user || !target) return false
+      if (user.id && target.id && user.id === target.id) return true
+      if (user.regcode && target.regcode && user.regcode === target.regcode) return true
+      if (user.ticketNumber && target.ticketNumber && user.ticketNumber === target.ticketNumber) return true
+      return false
+    }
+
+    const editFieldEntries = computed(() => {
+      const form = editUserForm.value || {}
+      const nonEditableKeys = [
+        'id',
+        '__ob__',
+        'avatar',
+        'province',
+        'city',
+        'customer_type',
+        'industry',
+        'regcode',
+        'ticketNumber',
+        'payState',
+        'country',
+        'signed',
+        'complaintState',
+        'signinTime',
+        'ticket',
+        'department',
+      ]
+      return Object.keys(form)
+        .filter(key => !nonEditableKeys.includes(key))
+        .map(key => ({
+          key,
+          label: formatFieldName(key),
+          type: typeof form[key] === 'boolean' ? 'boolean' : 'text'
+        }))
+    })
+    const readOnlyEditFields = ['email', 'mobile', 'phone']
+
+    const resetEditForm = () => {
+      editUserForm.value = createEmptyEditForm()
+    }
+
+    const openEditDialog = (user) => {
+      if (!user) return
+      const clone = JSON.parse(JSON.stringify(user))
+      if (clone.mobile == null && clone.phone) {
+        clone.mobile = clone.phone
+      }
+      if (clone.phone == null && clone.mobile) {
+        clone.phone = clone.mobile
+      }
+      if (clone.regcode == null && clone.ticketNumber) {
+        clone.regcode = clone.ticketNumber
+      }
+      if (clone.ticketNumber == null && clone.regcode) {
+        clone.ticketNumber = clone.regcode
+      }
+      editUserForm.value = clone
+      showEditDialog.value = true
+    }
+
+    const cancelEdit = () => {
+      showEditDialog.value = false
+      resetEditForm()
+    }
+
+    const saveUserEdits = async () => {
+      const payload = { ...editUserForm.value }
+      const fieldValues = { ...(payload.fieldValues || {}) }
+
+      Object.keys(payload).forEach(key => {
+        if (key.startsWith('cf_')) {
+          fieldValues[key] = payload[key]
+          delete payload[key]
+        }
+      })
+
+      payload.fieldValues = fieldValues
+
+      if (payload.mobile && !payload.phone) {
+        payload.phone = payload.mobile
+      }
+
+      if (payload.phone && !payload.mobile) {
+        payload.mobile = payload.phone
+      }
+
+      if (!payload.id && !payload.regcode && !payload.ticketNumber) {
+        showEditDialog.value = false
+        resetEditForm()
+        return
+      }
+
+      $q.loading.show({
+        message: '正在保存用户信息...'
+      })
+
+      try {
+        const response = await api.post('/api/v2/editMember', payload)
+        if (response.data?.success === false) {
+          $q.notify({
+            type: 'negative',
+            message: response.data?.message || '保存失败，请稍后重试'
+          })
+          return
+        }
+
+        const responseData = response.data?.data || {}
+        const updatedUser = { ...payload, ...responseData }
+
+        const mergedFieldValues = {
+          ...(payload.fieldValues || {}),
+          ...(responseData.fieldValues || {})
+        }
+
+        if (Object.keys(mergedFieldValues).length) {
+          updatedUser.fieldValues = mergedFieldValues
+          Object.keys(mergedFieldValues).forEach(key => {
+            updatedUser[key] = mergedFieldValues[key]
+          })
+        }
+
+        searchResults.value = searchResults.value.map(user => {
+          if (isSameUser(user, updatedUser)) {
+            return { ...user, ...updatedUser }
+          }
+          return user
+        })
+
+        if (selectedUser.value && isSameUser(selectedUser.value, updatedUser)) {
+          selectedUser.value = { ...selectedUser.value, ...updatedUser }
+        }
+
+        if (detailUser.value && isSameUser(detailUser.value, updatedUser)) {
+          detailUser.value = { ...detailUser.value, ...updatedUser }
+        }
+
+        $q.notify({
+          type: 'positive',
+          message: response.data?.message || '用户信息已更新'
+        })
+
+        showEditDialog.value = false
+        resetEditForm()
+      } catch (error) {
+        console.error('保存用户信息失败:', error)
+        const errorMsg = error.response?.data?.message || error.message || '保存失败，请稍后重试'
+        $q.notify({
+          type: 'negative',
+          message: errorMsg
+        })
+      } finally {
+        $q.loading.hide()
+      }
+    }
+
     // 重置表单
     const resetForm = () => {
       queryForm.value = {
         name: '',
+        py: '',
         phone: '',
         email: '',
         ticketNumber: ''
@@ -539,6 +769,7 @@ export default defineComponent({
         
         // 清空其他查询条件，只使用门票编号查询
         queryForm.value.name = ''
+        queryForm.value.py = ''
         queryForm.value.phone = ''
         queryForm.value.email = ''
         
@@ -597,6 +828,7 @@ export default defineComponent({
             page: apiPage,  // 传递从0开始的页码
             pageSize: pagination.value.pageSize,
             name: queryForm.value.name || '',
+            py: queryForm.value.py || '',
             regcode: queryForm.value.ticketNumber || '',
             email: queryForm.value.email || '',
             mobile: queryForm.value.phone || ''
@@ -910,7 +1142,11 @@ export default defineComponent({
       fieldList,
       showDetailDialog,
       detailUser,
+      showEditDialog,
+      editUserForm,
+      editFieldEntries,
       filteredDetailUser,
+      readOnlyEditFields,
       ticketNumberInput,
       hasQueryCondition,
       resetForm,
@@ -926,6 +1162,9 @@ export default defineComponent({
       formatDateTime,
       formatFieldName,
       showUserDetail,
+      openEditDialog,
+      saveUserEdits,
+      cancelEdit,
       handleSigninFromDetail,
       handlePrintFromDetail,
       getEventFields,
