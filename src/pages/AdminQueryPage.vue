@@ -149,7 +149,45 @@
               </q-td>
             </template>
 
-            <!-- 打印状态列 -->
+            <!-- 联系方式列 -->
+            <template v-slot:body-cell-contact="props">
+              <q-td :props="props">
+                <div>{{ props.row.mobile || props.row.phone || '-' }}</div>
+                <div class="text-caption text-grey">{{ props.row.email || '-' }}</div>
+              </q-td>
+            </template>
+
+            <!-- 门票列 -->
+            <template v-slot:body-cell-ticket="props">
+              <q-td :props="props">
+                {{ props.row.ticket || '-' }}
+              </q-td>
+            </template>
+
+            <!-- 公司列 -->
+            <template v-slot:body-cell-company="props">
+              <q-td :props="props">
+                {{ props.row.company || '-' }}
+              </q-td>
+            </template>
+
+            <!-- 预报名状态列 -->
+            <template v-slot:body-cell-complaintState="props">
+              <q-td :props="props">
+                {{ props.row.complaintState || '-' }}
+              </q-td>
+            </template>
+
+            <!-- 支付状态列 -->
+            <template v-slot:body-cell-payState="props">
+              <q-td :props="props">
+                <q-badge :color="props.row.payState === 1 ? 'positive' : 'grey'">
+                  {{ getPayStateLabel(props.row.payState) }}
+                </q-badge>
+              </q-td>
+            </template>
+
+            <!-- 签到状态列 -->
             <template v-slot:body-cell-signed="props">
               <q-td :props="props">
                 <q-badge :color="props.row.signed ? 'positive' : 'grey'">
@@ -511,24 +549,38 @@ export default defineComponent({
         sortable: true
       },
       {
-        name: 'mobile',
-        label: '手机号',
-        field: row => row.mobile || row.phone,
+        name: 'type',
+        label: '门票类型',
+        field: row => row.type || row.ticketType,
         align: 'left',
         sortable: true
       },
       {
-        name: 'email',
-        label: '邮箱',
-        field: 'email',
+        name: 'contact',
+        label: '联系方式',
+        field: row => row.mobile || row.phone || row.email,
+        align: 'left',
+        sortable: false
+      },
+      {
+        name: 'company',
+        label: '公司',
+        field: 'company',
         align: 'left',
         sortable: true
       },
       {
-        name: 'regcode',
-        label: '门票编号',
-        field: row => row.regcode || row.ticketNumber,
-        align: 'left',
+        name: 'complaintState',
+        label: '预报名状态',
+        field: 'complaintState',
+        align: 'center',
+        sortable: true
+      },
+      {
+        name: 'payState',
+        label: '支付状态',
+        field: 'payState',
+        align: 'center',
         sortable: true
       },
       {
@@ -684,7 +736,7 @@ export default defineComponent({
       })
 
       try {
-        const response = await api.post('/api/v2/editMember', payload)
+        const response = await api.post('/editMember', payload)
         if (response.data?.success === false) {
           $q.notify({
             type: 'negative',
@@ -707,6 +759,7 @@ export default defineComponent({
             updatedUser[key] = mergedFieldValues[key]
           })
         }
+        delete updatedUser.fieldValues
 
         searchResults.value = searchResults.value.map(user => {
           if (isSameUser(user, updatedUser)) {
@@ -921,6 +974,14 @@ export default defineComponent({
         '媒体': 'orange'
       }
       return colors[type] || 'grey'
+    }
+
+    const getPayStateLabel = (state) => {
+      const map = {
+        1: '已支付',
+        2: '未支付'
+      }
+      return map[state] || '-'
     }
 
     // 格式化日期时间
@@ -1159,6 +1220,7 @@ export default defineComponent({
       selectUser,
       clearSelection,
       getTypeBadgeColor,
+      getPayStateLabel,
       formatDateTime,
       formatFieldName,
       showUserDetail,

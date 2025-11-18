@@ -248,7 +248,7 @@ export default defineComponent({
         } else if (response.data && response.data.success === false) {
           $q.notify({
             type: 'negative',
-            message: response.data.data || '签到失败'
+            message: response.data.message || '签到失败'
           })
         } else {
           $q.notify({
