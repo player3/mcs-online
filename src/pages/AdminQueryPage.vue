@@ -901,6 +901,15 @@ export default defineComponent({
         console.log('查询响应:', response.data)
         console.log('请求参数 - UI页码:', page, '- API页码:', apiPage)
 
+        if (response.data && response.data.success && response.data.data) {
+          response.data.data = response.data.data.map(item => {
+            if (item.complaintState && typeof item.complaintState === 'string' && item.complaintState.includes('|')) {
+              item.complaintState = item.complaintState.split('|')[0]
+            }
+            return item
+          })
+        }
+
         if (response.data && response.data.success) {
           searchResults.value = response.data.data || []
           pagination.value.total = response.data.total || 0
