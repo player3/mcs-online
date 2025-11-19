@@ -211,7 +211,8 @@ export default defineComponent({
         console.error('获取字段配置失败:', error)
         $q.notify({
           type: 'warning',
-          message: '获取字段配置失败，将使用默认配置'
+          message: '获取字段配置失败，将使用默认配置',
+          classes: 'large-notify'
         })
       }
     }
@@ -221,7 +222,8 @@ export default defineComponent({
       if (!isValidTicketFormat.value) {
         $q.notify({
           type: 'negative',
-          message: '请输入正确的门票编号格式（dddd-dddd-dddd）'
+          message: '请输入正确的门票编号格式（dddd-dddd-dddd）',
+          classes: 'large-notify'
         })
         return
       }
@@ -243,17 +245,20 @@ export default defineComponent({
           
           $q.notify({
             type: 'positive',
-            message: '签到成功！'
+            message: '签到成功！',
+            classes: 'large-notify'
           })
         } else if (response.data && response.data.success === false) {
           $q.notify({
             type: 'negative',
-            message: response.data.message || '签到失败'
+            message: response.data.data || '签到失败',
+            classes: 'large-notify'
           })
         } else {
           $q.notify({
             type: 'negative',
-            message: '签到失败，返回数据格式错误'
+            message: '签到失败，返回数据格式错误',
+            classes: 'large-notify'
           })
         }
       } catch (error) {
@@ -261,7 +266,8 @@ export default defineComponent({
         const errorMsg = error.response?.data?.message || error.message || '签到失败，请检查网络连接或联系管理员'
         $q.notify({
           type: 'negative',
-          message: errorMsg
+          message: errorMsg,
+          classes: 'large-notify'
         })
       } finally {
         $q.loading.hide()
@@ -281,7 +287,8 @@ export default defineComponent({
         // 打印成功
         $q.notify({
           type: 'positive',
-          message: '胸牌打印成功！'
+          message: '胸牌打印成功！',
+          classes: 'large-notify'
         })
         showUserInfo.value = false
         clearInput()
@@ -452,5 +459,21 @@ export default defineComponent({
 
 .action-button :deep(.q-btn__content) {
   font-size: 48px;
+}
+</style>
+
+<style>
+/* Large notify styles for self-print page */
+.large-notify {
+  padding: 24px 32px;
+  border-radius: 16px;
+  min-width: 400px;
+}
+.large-notify .q-notification__icon {
+  font-size: 56px;
+}
+.large-notify .q-notification__message {
+  font-size: 32px;
+  line-height: 1.4;
 }
 </style>
