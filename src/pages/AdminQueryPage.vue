@@ -1,6 +1,6 @@
 <template>
   <q-page class="q-pa-md">
-    <div class="q-pa-md" style="max-width: 1000px; margin: 0 auto;">
+    <div class="q-pa-md" style="max-width: 1200px; margin: 0 auto;">
       <div class="row items-center justify-between q-mb-lg">
         <div class="text-h4">
           用户信息查询
