@@ -683,6 +683,16 @@ export default defineComponent({
     const openEditDialog = (user) => {
       if (!user) return
       const clone = JSON.parse(JSON.stringify(user))
+      
+      // 确保 fieldList 中的所有字段都存在于 clone 中
+      if (fieldList.value && fieldList.value.length > 0) {
+        fieldList.value.forEach(field => {
+          if (field.name && clone[field.name] === undefined) {
+            clone[field.name] = ''
+          }
+        })
+      }
+
       if (clone.mobile == null && clone.phone) {
         clone.mobile = clone.phone
       }
