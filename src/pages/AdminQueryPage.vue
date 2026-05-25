@@ -88,6 +88,19 @@
                 </template>
               </q-input>
             </div>
+            <div class="col-12 col-md-6">
+              <q-select
+                v-model="selectedScene"
+                :options="scenes"
+                label="当前场地"
+                outlined
+                clearable
+              >
+                <template v-slot:prepend>
+                  <q-icon name="place" />
+                </template>
+              </q-select>
+            </div>
           </div>
         </q-card-section>
 
@@ -205,7 +218,6 @@
                   icon="check_circle"
                   label="签到"
                   @click="handleSignin(props.row)"
-                  :disable="props.row.signed"
                   unelevated
                   dense
                   class="q-mr-sm"
@@ -422,7 +434,6 @@
               color="primary"
               icon="check_circle"
               @click="handleSigninFromDetail"
-              :disable="detailUser?.signed"
               unelevated
             />
             <q-btn
@@ -507,6 +518,9 @@ export default defineComponent({
       email: '',
       ticketNumber: ''
     })
+
+    const scenes = ref([])
+    const selectedScene = ref('')
 
     const searchResults = ref([])
     const selectedUser = ref(null)
@@ -1068,7 +1082,11 @@ export default defineComponent({
       })
 
       try {
-        const response = await api.get(`/AutoSignin?regcode=${user.regcode || user.ticketNumber}`)
+        let url = `/AutoSignin?regcode=${user.regcode || user.ticketNumber}`
+        if (selectedScene.value) {
+          url += `&scene=${encodeURIComponent(selectedScene.value)}`
+        }
+        const response = await api.get(url)
         
         console.log('签到响应:', response.data)
         
@@ -1152,6 +1170,15 @@ export default defineComponent({
             fieldList.value = response.data.fieldList
             console.log('字段列表:', fieldList.value)
           }
+
+          // 保存scenes到变量中
+          if (response.data.scenes) {
+            scenes.value = response.data.scenes
+            console.log('场地列表:', scenes.value)
+            if (scenes.value.length > 0 && !selectedScene.value) {
+              selectedScene.value = scenes.value[0]
+            }
+          }
           
           console.log('字段配置加载完成')
         }
@@ -1210,6 +1237,8 @@ export default defineComponent({
 
     return {
       queryForm,
+      scenes,
+      selectedScene,
       searchResults,
       selectedUser,
       searchPerformed,
