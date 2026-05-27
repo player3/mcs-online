@@ -1,7 +1,7 @@
 /**
  * Mock API Server
  * 用于测试前端功能的模拟后端服务器
- * 
+ *
  * 运行方式: node mock-server.js
  */
 
@@ -29,7 +29,9 @@ const users = [
     company: '科技有限公司',
     position: '总经理',
     printed: false,
-    printTime: null
+    printTime: null,
+    signed: false,
+    signinTime: null
   },
   {
     id: '2',
@@ -41,7 +43,9 @@ const users = [
     company: '互联网公司',
     position: '技术总监',
     printed: true,
-    printTime: '2024-01-15T10:30:00Z'
+    printTime: '2024-01-15T10:30:00Z',
+    signed: true,
+    signinTime: '2024-01-15T10:28:00Z'
   },
   {
     id: '3',
@@ -53,7 +57,9 @@ const users = [
     company: '软件开发公司',
     position: '开发工程师',
     printed: false,
-    printTime: null
+    printTime: null,
+    signed: false,
+    signinTime: null
   },
   {
     id: '4',
@@ -65,7 +71,9 @@ const users = [
     company: '会议服务公司',
     position: '志愿者',
     printed: false,
-    printTime: null
+    printTime: null,
+    signed: false,
+    signinTime: null
   },
   {
     id: '5',
@@ -77,9 +85,19 @@ const users = [
     company: '新闻媒体',
     position: '记者',
     printed: true,
-    printTime: '2024-01-15T09:15:00Z'
+    printTime: '2024-01-15T09:15:00Z',
+    signed: true,
+    signinTime: '2024-01-15T09:10:00Z'
   }
 ]
+
+// 重写 /api/v2/* 为 /api/*
+app.use((req, res, next) => {
+  if (req.url.startsWith('/api/v2/')) {
+    req.url = req.url.replace('/api/v2/', '/api/')
+  }
+  next()
+})
 
 // 日志中间件
 app.use((req, res, next) => {
@@ -88,16 +106,113 @@ app.use((req, res, next) => {
 })
 
 /**
+ * 获取活动字段配置
+ * GET /api/GetEventFields
+ */
+app.get('/api/GetEventFields', (req, res) => {
+  res.json({
+    success: true,
+    data: {
+      name: '姓名 Name',
+      mobile: '手机 Cell Phone',
+      email: '邮箱 Email',
+      company: '公司 Company',
+      position: '职位 Position'
+    },
+    fieldList: [
+      { name: 'name', describe: '姓名' },
+      { name: 'mobile', describe: '手机' },
+      { name: 'email', describe: '邮箱' },
+      { name: 'company', describe: '公司' },
+      { name: 'position', describe: '职位' }
+    ],
+    scenes: ['主会场', '分会场A', '分会场B', 'VIP接待室', '签到处']
+  })
+})
+
+/**
+ * 自动签到
+ * GET /api/AutoSignin
+ */
+app.get('/api/AutoSignin', (req, res) => {
+  const { regcode, scene } = req.query
+  console.log(`自动签到请求 - 门票编号: ${regcode}, 场地: ${scene}`)
+
+  const user = users.find(u => u.ticketNumber === regcode)
+
+  if (user) {
+    user.signed = true
+    user.signinTime = new Date().toISOString()
+    user.scene = scene || null
+
+    res.json({
+      success: true,
+      data: user,
+      message: '签到成功'
+    })
+  } else {
+    res.status(404).json({
+      success: false,
+      data: null,
+      message: '门票编号不存在'
+    })
+  }
+})
+
+/**
+ * 自动搜索（分页查询）
+ * GET /api/AutoSearch
+ */
+app.get('/api/AutoSearch', (req, res) => {
+  const { name, py, regcode, email, mobile, page = 0, pageSize = 10 } = req.query
+
+  console.log('自动搜索条件:', { name, py, regcode, email, mobile, page, pageSize })
+
+  let results = users
+
+  // 按条件过滤
+  if (name) {
+    results = results.filter(u => u.name && u.name.includes(name))
+  }
+  if (py) {
+    results = results.filter(u => (u.py && u.py.includes(py)) || (u.name && u.name.includes(py)))
+  }
+  if (regcode) {
+    results = results.filter(
+      u => (u.ticketNumber && u.ticketNumber.includes(regcode)) || (u.regcode && u.regcode.includes(regcode))
+    )
+  }
+  if (email) {
+    results = results.filter(u => u.email && u.email.includes(email))
+  }
+  if (mobile) {
+    results = results.filter(u => (u.phone && u.phone.includes(mobile)) || (u.mobile && u.mobile.includes(mobile)))
+  }
+
+  const total = results.length
+  const startIdx = parseInt(page) * parseInt(pageSize)
+  const endIdx = startIdx + parseInt(pageSize)
+  const paginatedResults = results.slice(startIdx, endIdx)
+
+  res.json({
+    success: true,
+    data: paginatedResults,
+    total: total,
+    message: `找到 ${total} 条记录，当前返回第 ${page} 页`
+  })
+})
+
+/**
  * 根据门票编号查询用户
  * GET /api/tickets/:ticketNumber
  */
 app.get('/api/tickets/:ticketNumber', (req, res) => {
   const { ticketNumber } = req.params
-  
+
   console.log(`查询门票: ${ticketNumber}`)
-  
+
   const user = users.find(u => u.ticketNumber === ticketNumber)
-  
+
   if (user) {
     res.json({
       success: true,
@@ -119,11 +234,11 @@ app.get('/api/tickets/:ticketNumber', (req, res) => {
  */
 app.get('/api/users/search', (req, res) => {
   const { name, phone, email, ticketNumber } = req.query
-  
+
   console.log('查询条件:', { name, phone, email, ticketNumber })
-  
+
   let results = users
-  
+
   // 按条件过滤
   if (name) {
     results = results.filter(u => u.name.includes(name))
@@ -137,7 +252,7 @@ app.get('/api/users/search', (req, res) => {
   if (ticketNumber) {
     results = results.filter(u => u.ticketNumber.includes(ticketNumber))
   }
-  
+
   res.json({
     success: true,
     data: results,
@@ -151,16 +266,16 @@ app.get('/api/users/search', (req, res) => {
  */
 app.post('/api/print', (req, res) => {
   const { ticketNumber, userInfo } = req.body
-  
+
   console.log('打印请求:', { ticketNumber, userName: userInfo?.name })
-  
+
   // 查找并更新用户的打印状态
   const userIndex = users.findIndex(u => u.ticketNumber === ticketNumber)
-  
+
   if (userIndex !== -1) {
     users[userIndex].printed = true
     users[userIndex].printTime = new Date().toISOString()
-    
+
     // 模拟打印延迟
     setTimeout(() => {
       res.json({
@@ -241,4 +356,3 @@ app.listen(PORT, () => {
   console.log('='.repeat(50))
   console.log('\n按 Ctrl+C 停止服务器\n')
 })
-

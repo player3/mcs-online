@@ -134,8 +134,9 @@
 </template>
 
 <script>
-import { defineComponent, ref, computed, onMounted, onUnmounted } from 'vue'
+import { defineComponent, ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useQuasar } from 'quasar'
+import { useRoute } from 'vue-router'
 import { api } from 'boot/axios'
 import { printBadge } from 'src/utils/printUtils'
 
@@ -144,6 +145,8 @@ export default defineComponent({
 
   setup() {
     const $q = useQuasar()
+    const route = useRoute()
+    const scene = computed(() => route.query.scene || '')
     const ticketNumber = ref('')
     const showUserInfo = ref(false)
     const ticketInputRef = ref(null) // 输入框引用
@@ -169,7 +172,7 @@ export default defineComponent({
       if (ticketNumber.value.length >= 14) {
         return
       }
-      
+
       ticketNumber.value += char
     }
 
@@ -234,7 +237,9 @@ export default defineComponent({
 
       try {
         // 调用自动签到接口
-        const response = await api.get(`/AutoSignin?regcode=${ticketNumber.value}`)
+        const params = { regcode: ticketNumber.value }
+        if (scene.value) params.scene = scene.value
+        const response = await api.get('/AutoSignin', { params })
         
         console.log('签到响应:', response.data)
         
@@ -242,7 +247,7 @@ export default defineComponent({
         if (response.data.success) {
           userInfo.value = response.data.data
           handlePrintBadge()
-          
+
           $q.notify({
             type: 'positive',
             message: '签到成功！',
@@ -270,6 +275,7 @@ export default defineComponent({
           classes: 'large-notify'
         })
       } finally {
+        clearInput()
         $q.loading.hide()
       }
     }
@@ -314,7 +320,7 @@ export default defineComponent({
         return
       }
 
-      // 只处理数字、横线和退格键
+      // 只处理数字、横线、退格键和回车键
       const key = event.key
       const allowedKeys = /^[0-9-]$/
       
@@ -338,8 +344,22 @@ export default defineComponent({
           inputElement.focus()
         }
         deleteChar()
+      } else if (key === 'Enter') {
+        // 回车键手动触发签到
+        event.preventDefault()
+        if (isValidTicketFormat.value) {
+          confirmPrint()
+        }
       }
     }
+
+    // 门票编号变化时，若格式合法则自动触发签到
+    // 覆盖虚拟键盘、扫码枪、物理键盘聚焦输入框、粘贴等所有输入路径
+    watch(ticketNumber, () => {
+      if (isValidTicketFormat.value) {
+        confirmPrint()
+      }
+    })
 
     // 页面加载时获取字段配置并添加全局键盘监听
     onMounted(() => {
@@ -376,7 +396,7 @@ export default defineComponent({
 <style scoped>
 .self-print-page {
   min-height: 100vh;
-  background: #000 url('/bg.png') center center / cover no-repeat;
+  background: #000 url('/bg.jpg') center center / cover no-repeat;
   display: flex;
   justify-content: center;
   align-items: flex-start;

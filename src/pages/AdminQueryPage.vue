@@ -89,6 +89,19 @@
               </q-input>
             </div>
             <div class="col-12 col-md-6">
+              <q-input
+                v-model="queryForm.company"
+                label="公司名称"
+                outlined
+                clearable
+                @keyup.enter="handleEnterKey"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="business" />
+                </template>
+              </q-input>
+            </div>
+            <div class="col-12 col-md-6">
               <q-select
                 v-model="selectedScene"
                 :options="scenes"
@@ -516,7 +529,8 @@ export default defineComponent({
       py: '',
       phone: '',
       email: '',
-      ticketNumber: ''
+      ticketNumber: '',
+      company: ''
     })
 
     const scenes = ref([])
@@ -625,7 +639,8 @@ export default defineComponent({
         queryForm.value.py ||
         queryForm.value.phone ||
         queryForm.value.email ||
-        queryForm.value.ticketNumber
+        queryForm.value.ticketNumber ||
+        queryForm.value.company
       )
     })
 
@@ -826,7 +841,8 @@ export default defineComponent({
         py: '',
         phone: '',
         email: '',
-        ticketNumber: ''
+        ticketNumber: '',
+        company: ''
       }
       searchResults.value = []
       selectedUser.value = null
@@ -908,7 +924,8 @@ export default defineComponent({
             py: queryForm.value.py || '',
             regcode: queryForm.value.ticketNumber || '',
             email: queryForm.value.email || '',
-            mobile: queryForm.value.phone || ''
+            mobile: queryForm.value.phone || '',
+            company: queryForm.value.company || ''
           }
         })
 
